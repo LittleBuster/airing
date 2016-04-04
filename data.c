@@ -19,6 +19,8 @@ static struct {
 	uint8_t hum_outside;
 	uint8_t temp_inside;
 	uint8_t temp_outside;
+	struct rtc_time time;
+	struct rtc_date date;
 } data = {
 		.hum_diff = 10,
 		.hum_inside = 0,
@@ -76,4 +78,22 @@ void set_hum_diff(uint8_t diff)
 {
 	data.hum_diff = diff;
 	eeprom_write_byte((uint8_t *)0x01, diff);
+}
+
+void rtc_set_datetime(struct rtc_time *tm, struct rtc_date *dt)
+{
+	data.time.hour = tm->hour;
+	data.time.min = tm->min;
+	data.date.day = dt->day;
+	data.date.month = dt->month;
+	data.date.year = dt->year;
+}
+
+void rtc_get_datetime(struct rtc_time *tm, struct rtc_date *dt)
+{
+	tm->hour = data.time.hour;
+	tm->min = data.time.min;
+	dt->day = data.date.day;
+	dt->month = data.date.month;
+	dt->year = data.date.year;
 }

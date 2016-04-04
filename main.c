@@ -14,17 +14,24 @@
 #include <avr/interrupt.h>
 #include "dht22.h"
 #include "data.h"
+#include "rtc3231.h"
 #include "menu.h"
 #include "lcd1602.h"
 
 #define F_CPU 16000000UL
+#define MAX_RTIME 28800
 
+uint8_t now_day = 0;
+volatile uint8_t is_run = 0;
 volatile uint8_t time = 0;
+volatile unsigned run_time = 0;
 
 
 ISR (TIMER1_COMPA_vect)
 {
 	time++;
+	if (is_run && (run_time != MAX_RTIME))
+		run_time++;
 }
 
 int main(void)
@@ -32,11 +39,15 @@ int main(void)
 	struct dht22 dht_out;
 	struct dht22 dht_in;
 
-	dht_init(&dht_out, 1); // out
-	dht_init(&dht_in, 2); // in
+	DDRB |= (1 << 3);
+	PORTB &= ~(1 << 3);
+
+	dht_init(&dht_out, 1);
+	dht_init(&dht_in, 2);
 	lcd1602_init();
 	menu_init();
 	data_init();
+	rtc3231_init();
 
 	lcd1602_clear();
 	lcd1602_send_string("  Airing System");
@@ -57,14 +68,34 @@ int main(void)
 	for (;;) {
 		menu_loop();
 
-		if (time > 5) {
-			float t, h;
+		if (time > 10) {
+			uint8_t hd;
+			float to, ho;
+			float ti, hi;
+			struct rtc_date dt;
 
-			dht_read_data(&dht_out, &t, &h);
-			set_data_outside((int8_t)t, (uint8_t)h);
+			dht_read_data(&dht_out, &to, &ho);
+			set_data_outside((int8_t)to, (uint8_t)ho);
 
-			dht_read_data(&dht_in, &t, &h);
-			set_data_inside((int8_t)t, (uint8_t)h);
+			dht_read_data(&dht_in, &ti, &hi);
+			set_data_inside((int8_t)ti, (uint8_t)hi);
+
+			hd = get_hum_diff();
+			if (ho < hi && (hi-ho) > hd && run_time < MAX_RTIME) {
+				// on airing
+				PORTB |= (1 << 3);
+				is_run = 1;
+			} else {
+				// off airing
+				PORTB &= ~(1 << 3);
+				is_run = 0;
+			}
+
+			rtc3231_read_date(&dt);
+			if (dt.day != now_day) {
+				now_day = dt.day;
+				run_time = 0;
+			}
 
 			menu_main_refresh();
 			time = 0;

@@ -12,9 +12,11 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "lcd1602.h"
 #include "sound.h"
+#include "rtc3231.h"
 #include "menu.h"
 #include "data.h"
 
@@ -49,7 +51,6 @@ void menu_init(void)
 	PORTB |= (1 << B_MENU_PLUS);
 	PORTD |= (1 << B_MENU_MINUS);
 	PORTD |= (1 << B_MENU_OK);
-
 }
 
 void menu_main_refresh(void)
@@ -105,8 +106,44 @@ void menu_loop(void)
 		case 0: {
 			if (!menu.is_main) {
 				char sdata[5];
+				struct rtc_time tm;
+				struct rtc_date dt;
 
-				lcd1602_send_string("OtH InH OtT InT");
+				rtc3231_read_datetime(&tm, &dt);
+				lcd1602_clear();
+
+				//time
+				if (tm.hour < 10)
+					sprintf(sdata, "0%d:", tm.hour);
+				else
+					sprintf(sdata, "%d:", tm.hour);
+				lcd1602_send_string(sdata);
+				lcd1602_goto_xy(3, 0);
+				if (tm.min < 10)
+					sprintf(sdata, "0%d ", tm.min);
+				else
+					sprintf(sdata, "%d ", tm.min);
+				lcd1602_send_string(sdata);
+				//date
+				lcd1602_goto_xy(6, 0);
+				if (dt.day < 10)
+					sprintf(sdata, "0%d.", dt.day);
+				else
+					sprintf(sdata, "%d.", dt.day);
+				lcd1602_send_string(sdata);
+				lcd1602_goto_xy(9, 0);
+				if (dt.month < 10)
+					sprintf(sdata, "0%d.", dt.month);
+				else
+					sprintf(sdata, "%d.", dt.month);
+				lcd1602_send_string(sdata);
+				lcd1602_goto_xy(12, 0);
+				if (dt.year < 10)
+					sprintf(sdata, "200%d.", dt.year);
+				else
+					sprintf(sdata, "20%d.", dt.year);
+				lcd1602_send_string(sdata);
+
 				lcd1602_goto_xy(0, 1);
 				memset(sdata, 0x00, 4);
 				snprintf(sdata, 4, "%d%%", get_hum_outside());

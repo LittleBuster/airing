@@ -13,6 +13,7 @@
 #define __DATA_H__
 
 #include <stdint.h>
+#include "rtc3231.h"
 
 
 void data_init(void);
@@ -33,5 +34,8 @@ uint8_t get_hum_diff(void);
 
 void set_hum_diff(uint8_t diff);
 
+void rtc_set_datetime(struct rtc_time *tm, struct rtc_date *dt);
+
+void rtc_get_datetime(struct rtc_time *tm, struct rtc_date *dt);
 
 #endif
